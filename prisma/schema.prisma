@@ -37,9 +37,6 @@ model Webhook {
   @@map("webhooks")
 }
 
-  @@map("bins")
-}
-
 model AccessToken {
   id        String    @id @db.Uuid
   userId    String    @map("user_id") @db.Uuid

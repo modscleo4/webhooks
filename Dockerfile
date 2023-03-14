@@ -3,7 +3,7 @@ FROM node:18-alpine
 WORKDIR /app
 
 COPY . .
-RUN rm .env
+RUN rm -f .env
 
 RUN npm ci; \
   npx prisma generate; \
