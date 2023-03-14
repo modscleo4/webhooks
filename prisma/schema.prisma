@@ -1,0 +1,55 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @db.Uuid
+  username  String    @unique @db.VarChar(255)
+  password  String    @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  webhooks Webhook[]
+  accessTokens AccessToken[]
+
+  @@map("users")
+}
+
+model Webhook {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  method    String    @default("GET") @db.VarChar(255)
+  callback  String    @db.VarChar(255)
+  body      String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("webhooks")
+}
+
+  @@map("bins")
+}
+
+model AccessToken {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  scope     String    @db.VarChar(255)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  expiresAt DateTime? @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("access_tokens")
+}

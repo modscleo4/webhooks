@@ -1,0 +1,42 @@
+{
+  "name": "httpbin-app",
+  "version": "1.0.0",
+  "description": "Example project for @modscleo4/midori web API framework.",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "build": "ttsc",
+    "clean": "tsc -b --clean",
+    "dev": "nodemon --inspect src/server.ts",
+    "start": "node .",
+    "test": "ts-node-esm src/test/index.ts",
+    "cannon": "npx autocannon -c 500 -d 30 --renderStatusCodes --latency localhost:3000/bin",
+    "generateKeys": "node ./bin/generateKeys.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/modscleo4/httpbin.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^18.8.5",
+    "autocannon": "^7.10.0",
+    "nodemon": "^2.0.20",
+    "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.1.0",
+    "ttypescript": "^1.5.13",
+    "typescript": "^4.9.5",
+    "typescript-transform-paths": "^3.3.1"
+  },
+  "dependencies": {
+    "@prisma/client": "^4.5.0",
+    "dotenv": "^16.0.3",
+    "midori": "github:modscleo4/midori",
+    "prisma": "^4.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
