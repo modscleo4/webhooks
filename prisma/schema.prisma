@@ -33,8 +33,23 @@ model Webhook {
   updatedAt DateTime? @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
+  logs WebhookLog[]
 
   @@map("webhooks")
+}
+
+model WebhookLog {
+  id        String    @id @db.Uuid
+  webhookId String    @map("webhook_id") @db.Uuid
+  status    Int       @default(0) @db.Integer
+  headers   Json      @db.Json
+  body      String?   @db.Text
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  webhook Webhook @relation(fields: [webhookId], references: [id])
+
+  @@map("webhook_logs")
 }
 
 model AccessToken {

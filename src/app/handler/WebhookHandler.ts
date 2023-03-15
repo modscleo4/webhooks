@@ -23,6 +23,7 @@ import { AuthServiceProvider } from "midori/providers";
 
 import { Prisma } from "@prisma/client";
 import WebhookDAO from "@core/dao/WebhookDAO.js";
+import WebhookLogDAO from "@core/dao/WebhookLogDAO.js";
 
 export class List extends Handler {
     #auth: Auth;
@@ -88,6 +89,14 @@ export class Create extends Handler {
 }
 
 export class Show extends Handler {
+    #auth: Auth;
+
+    constructor(app: Application) {
+        super(app);
+
+        this.#auth = app.services.get(AuthServiceProvider);
+    }
+
     async handle(req: Request): Promise<Response> {
         const id = req.params.get('id');
         if (!id) {
@@ -102,6 +111,13 @@ export class Show extends Handler {
 
         if (!webhook) {
             throw new HTTPError('Webhook not found.', EStatusCode.NOT_FOUND);
+        }
+
+        // Since the AuthBearer middleware is used, the user is already authenticated
+        const user = this.#auth.user(req)!;
+
+        if (webhook.userId !== user.id) {
+            throw new HTTPError('You are not the owner of this webhook.', EStatusCode.FORBIDDEN);
         }
 
         return Response.json(webhook);
@@ -300,6 +316,18 @@ export class Call extends Handler {
             for (const [key, value] of res.headers.entries()) {
                 responseHeaders[key] = value;
             }
+
+            await WebhookLogDAO.create({
+                id: generateUUID(),
+                webhook: {
+                    connect: {
+                        id: webhook.id
+                    }
+                },
+                status: res.status,
+                headers: responseHeaders,
+                body
+            });
 
             return Response.send(Buffer.from(body));
         } catch (e) {

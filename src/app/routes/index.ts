@@ -44,7 +44,7 @@ Router.group('/webhook', () => {
     Router.post('/', WebhookHandler.Create, [AuthBearerMiddleware]).withName('hook.create');
 
     Router.group('/{id}', () => {
-        Router.get('/', WebhookHandler.Show).withName('hook.show');
+        Router.get('/', WebhookHandler.Show, [AuthBearerMiddleware]).withName('hook.show');
         Router.put('/', WebhookHandler.Update, [AuthBearerMiddleware]).withName('hook.update');
         Router.patch('/', WebhookHandler.Patch, [AuthBearerMiddleware]).withName('hook.patch');
         Router.delete('/', WebhookHandler.Destroy, [AuthBearerMiddleware]).withName('hook.destroy');
