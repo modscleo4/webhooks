@@ -73,6 +73,6 @@ export class User extends Handler {
         // Since the AuthBearer middleware is used, the user is already authenticated
         const user = this.#auth.user(req)!;
 
-        return Response.json({ user, jwt: req.container.get('jwt') });
+        return Response.json({ user });
     }
 }

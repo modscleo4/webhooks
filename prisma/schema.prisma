@@ -27,7 +27,8 @@ model Webhook {
   id        String    @id @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   method    String    @default("GET") @db.VarChar(255)
-  callback  String    @db.VarChar(255)
+  url       String    @db.VarChar(255)
+  headers   Json?     @db.Json
   body      String?   @db.Text
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")

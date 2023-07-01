@@ -60,7 +60,7 @@ export class Create extends Handler {
     }
 
     async handle(req: Request): Promise<Response> {
-        if (!req.parsedBody || typeof req.parsedBody.callback !== 'string') {
+        if (!req.parsedBody || typeof req.parsedBody.url !== 'string') {
             throw new HTTPError("Invalid body.", EStatusCode.BAD_REQUEST);
         }
 
@@ -75,7 +75,8 @@ export class Create extends Handler {
                 connect: { id: user.id },
             },
             method: req.parsedBody.method || 'GET',
-            callback: req.parsedBody.callback,
+            url: req.parsedBody.url,
+            headers: req.parsedBody.headers ?? undefined,
             body: req.parsedBody.body,
         };
 
@@ -156,21 +157,16 @@ export class Update extends Handler {
             throw new HTTPError('You are not the owner of this webhook.', EStatusCode.FORBIDDEN);
         }
 
-        if (!req.parsedBody || typeof req.parsedBody.method !== 'string' || typeof req.parsedBody.callback !== 'string') {
+        if (!req.parsedBody || typeof req.parsedBody.method !== 'string' || typeof req.parsedBody.url !== 'string') {
             throw new HTTPError("Invalid body.", EStatusCode.BAD_REQUEST);
         }
 
-        webhook.callback = req.parsedBody.callback;
+        webhook.url = req.parsedBody.url;
+        webhook.method = req.parsedBody.method;
+        webhook.headers = req.parsedBody.headers;
+        webhook.body = req.parsedBody.body;
 
-        if (req.parsedBody.method) {
-            webhook.method = req.parsedBody.method;
-        }
-
-        if (req.parsedBody.body) {
-            webhook.body = req.parsedBody.body;
-        }
-
-        await WebhookDAO.save(webhook.id, { callback: webhook.callback! });
+        await WebhookDAO.save(webhook.id, { url: webhook.url, method: webhook.method, headers: webhook.headers ?? undefined, body: webhook.body });
 
         return Response.json(webhook);
     }
@@ -216,15 +212,19 @@ export class Patch extends Handler {
             webhook.method = req.parsedBody.method;
         }
 
-        if (req.parsedBody.callback) {
-            webhook.callback = req.parsedBody.callback;
+        if (req.parsedBody.url) {
+            webhook.url = req.parsedBody.url;
+        }
+
+        if (req.parsedBody.headers) {
+            webhook.headers = req.parsedBody.headers;
         }
 
         if (req.parsedBody.body) {
             webhook.body = req.parsedBody.body;
         }
 
-        await WebhookDAO.save(webhook.id, { method: webhook.method, callback: webhook.callback, body: webhook.body });
+        await WebhookDAO.save(webhook.id, { method: webhook.method, url: webhook.url, headers: webhook.headers ?? undefined, body: webhook.body });
 
         return Response.json(webhook);
     }
@@ -301,14 +301,11 @@ export class Call extends Handler {
         }
 
         try {
-            const res = await fetch(webhook.callback, {
+            const res = await fetch(webhook.url, {
+                headers: webhook.headers as Record<string, string> ?? undefined,
                 method: webhook.method,
                 body: webhook.body,
             });
-
-            if (!res.body) {
-                return Response.status(res.status);
-            }
 
             const body = await res.text();
 
@@ -328,6 +325,10 @@ export class Call extends Handler {
                 headers: responseHeaders,
                 body
             });
+
+            if (!res.body) {
+                return Response.status(res.status);
+            }
 
             return Response.send(Buffer.from(body));
         } catch (e) {

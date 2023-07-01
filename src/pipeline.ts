@@ -62,6 +62,7 @@ export default function pipeline(server: Server): void {
     // Add your own pre-processing middlewares here
     //
     //server.pipe(ResponseCompressionMiddlewareFactory({ contentTypes: ['*/*'] }));
+    server.pipe(CORSMiddlewareFactory({ origin: '*', openerPolicy: 'same-origin', embedderPolicy: 'require-corp' }));
 
     /**
      * Register the router middleware, which will handle all incoming requests
@@ -88,7 +89,6 @@ export default function pipeline(server: Server): void {
 
     // Add here any middlewares that should be executed before the route handler
     //
-    server.pipe(CORSMiddlewareFactory({ origin: '*', openerPolicy: 'same-origin', embedderPolicy: 'require-corp' }));
 
     /**
      * Dispatch the Middleware Chain the Router Middleware found

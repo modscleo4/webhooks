@@ -1,11 +1,11 @@
 {
-  "name": "httpbin-app",
+  "name": "webhooks",
   "version": "1.0.0",
-  "description": "Example project for @modscleo4/midori web API framework.",
+  "description": "Simple Webhook wrapper in Node.js.",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
-    "build": "ttsc",
+    "build": "tspc",
     "clean": "tsc -b --clean",
     "dev": "nodemon --inspect src/server.ts",
     "start": "node .",
@@ -15,26 +15,26 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/modscleo4/httpbin.git"
+    "url": "https://github.com/modscleo4/webhooks.git"
   },
   "keywords": [],
   "author": "",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@types/node": "^18.15.3",
+    "@types/node": "^18.15.11",
     "autocannon": "^7.10.0",
-    "nodemon": "^2.0.21",
+    "nodemon": "^2.0.22",
     "ts-node": "^10.9.1",
-    "tsconfig-paths": "^4.1.2",
-    "ttypescript": "^1.5.15",
-    "typescript": "^4.9.5",
+    "ts-patch": "^3.0.1",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.0.3",
     "typescript-transform-paths": "^3.4.6"
   },
   "dependencies": {
-    "@prisma/client": "^4.11.0",
+    "@prisma/client": "^4.12.0",
     "dotenv": "^16.0.3",
     "midori": "github:modscleo4/midori",
-    "prisma": "^4.11.0"
+    "prisma": "^4.12.0"
   },
   "engines": {
     "node": ">=18"
