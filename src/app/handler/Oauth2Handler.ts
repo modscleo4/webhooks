@@ -22,6 +22,7 @@ import { Application } from "midori/app";
 import { JWT } from "midori/jwt";
 import { Auth } from "midori/auth";
 import { AuthServiceProvider, JWTServiceProvider } from "midori/providers";
+
 import AccessTokenDAO from "@core/dao/AccessTokenDAO.js";
 import UserDAO from "@core/dao/UserDAO.js";
 

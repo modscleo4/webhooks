@@ -16,9 +16,9 @@
 
 import { Server } from "midori/app";
 import {
-    CORSMiddlewareFactory,
+    CORSMiddleware,
     DispatchMiddleware,
-    ErrorMiddlewareFactory,
+    ErrorMiddleware,
     ErrorLoggerMiddleware,
     HTTPErrorMiddleware,
     ImplicitHeadMiddleware,
@@ -28,7 +28,7 @@ import {
     ParseBodyMiddleware,
     PublicPathMiddlewareFactory,
     RequestLoggerMiddleware,
-    ResponseCompressionMiddlewareFactory,
+    ResponseCompressionMiddleware,
     RouterMiddleware
 } from "midori/middlewares";
 
@@ -45,7 +45,7 @@ export default function pipeline(server: Server): void {
      *
      * This middleware should be one of the first middlewares in the pipeline
      */
-    server.pipe(ErrorMiddlewareFactory({ exposeErrors: process.env.EXPOSE_ERRORS?.toUpperCase() === 'TRUE' }));
+    server.pipe(ErrorMiddleware);
 
     /**
      * Log every error using the Logger Service Provider
@@ -61,8 +61,8 @@ export default function pipeline(server: Server): void {
 
     // Add your own pre-processing middlewares here
     //
-    //server.pipe(ResponseCompressionMiddlewareFactory({ contentTypes: ['*/*'] }));
-    server.pipe(CORSMiddlewareFactory({ origin: '*', openerPolicy: 'same-origin', embedderPolicy: 'require-corp' }));
+    // server.pipe(ResponseCompressionMiddleware);
+    server.pipe(CORSMiddleware);
 
     /**
      * Register the router middleware, which will handle all incoming requests

@@ -1,24 +1,7 @@
-import crypto from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 
-/**
- *
- * @param {'rsa'|'ec'} alg
- */
-function generateKeypair(alg) {
-    return crypto.generateKeyPairSync(alg, {
-        publicKeyEncoding: {
-            format: 'pem',
-            type: 'spki'
-        },
-        privateKeyEncoding: {
-            format: 'pem',
-            type: 'pkcs8',
-        },
-        ...(alg === 'ec' ? { namedCurve: 'secp521r1' } : { modulusLength: 2048 })
-    });
-}
+import { generateKeypair } from "midori/util/keys.js";
 
 if (!existsSync('./keys')) {
     await mkdir('./keys');

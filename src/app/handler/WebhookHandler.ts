@@ -21,7 +21,7 @@ import { Auth } from "midori/auth";
 import { Application } from "midori/app";
 import { AuthServiceProvider } from "midori/providers";
 
-import { Prisma } from "@prisma/client";
+import { Prisma, Webhook } from "@prisma/client";
 import WebhookDAO from "@core/dao/WebhookDAO.js";
 import WebhookLogDAO from "@core/dao/WebhookLogDAO.js";
 
@@ -59,8 +59,8 @@ export class Create extends Handler {
         this.#auth = app.services.get(AuthServiceProvider);
     }
 
-    async handle(req: Request): Promise<Response> {
-        if (!req.parsedBody || typeof req.parsedBody.url !== 'string') {
+    async handle(req: Request<{ url: string, method: string, headers?: Record<string, string>, body?: string; }>): Promise<Response> {
+        if (!req.parsedBody) {
             throw new HTTPError("Invalid body.", EStatusCode.BAD_REQUEST);
         }
 
@@ -74,7 +74,7 @@ export class Create extends Handler {
             user: {
                 connect: { id: user.id },
             },
-            method: req.parsedBody.method || 'GET',
+            method: req.parsedBody.method,
             url: req.parsedBody.url,
             headers: req.parsedBody.headers ?? undefined,
             body: req.parsedBody.body,
@@ -134,7 +134,7 @@ export class Update extends Handler {
         this.#auth = app.services.get(AuthServiceProvider);
     }
 
-    async handle(req: Request): Promise<Response> {
+    async handle(req: Request<{ url: string, method: string, headers: Record<string, string> | null, body: string | null; }>): Promise<Response<Webhook>> {
         const id = req.params.get('id');
         if (!id) {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
@@ -157,7 +157,7 @@ export class Update extends Handler {
             throw new HTTPError('You are not the owner of this webhook.', EStatusCode.FORBIDDEN);
         }
 
-        if (!req.parsedBody || typeof req.parsedBody.method !== 'string' || typeof req.parsedBody.url !== 'string') {
+        if (!req.parsedBody) {
             throw new HTTPError("Invalid body.", EStatusCode.BAD_REQUEST);
         }
 
@@ -168,7 +168,7 @@ export class Update extends Handler {
 
         await WebhookDAO.save(webhook.id, { url: webhook.url, method: webhook.method, headers: webhook.headers ?? undefined, body: webhook.body });
 
-        return Response.json(webhook);
+        return Response.json<Webhook>(webhook);
     }
 }
 
@@ -181,7 +181,7 @@ export class Patch extends Handler {
         this.#auth = app.services.get(AuthServiceProvider);
     }
 
-    async handle(req: Request): Promise<Response> {
+    async handle(req: Request<{ url?: string, method?: string, headers?: Record<string, string>, body?: string; }>): Promise<Response> {
         const id = req.params.get('id');
         if (!id) {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
@@ -307,7 +307,7 @@ export class Call extends Handler {
                 body: webhook.body,
             });
 
-            const body = await res.text();
+            const body = !res.body ? null : await res.text();
 
             const responseHeaders: Record<string, string> = {};
             for (const [key, value] of res.headers.entries()) {
@@ -326,11 +326,11 @@ export class Call extends Handler {
                 body
             });
 
-            if (!res.body) {
-                return Response.status(res.status);
-            }
-
-            return Response.send(Buffer.from(body));
+            return Response.json({
+                status: res.status,
+                headers: responseHeaders,
+                body,
+            });
         } catch (e) {
             if (!(e instanceof Error)) {
                 throw e;

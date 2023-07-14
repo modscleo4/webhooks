@@ -22,6 +22,7 @@ import { prisma } from "@core/lib/Prisma.js";
 
 import pipeline from "./pipeline.js";
 import providers from "./providers.js";
+import config from './config.js';
 
 dotenv.config({ });
 
@@ -31,6 +32,7 @@ if (!server.production) {
     dotenv.config({ path: './.env.dev' });
 }
 
+config(server);
 providers(server);
 pipeline(server);
 
