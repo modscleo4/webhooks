@@ -5,7 +5,7 @@ WORKDIR /app
 COPY . .
 RUN rm -f .env
 
-VOLUME /app/.env
+VOLUME /app/keys
 
 RUN npm ci; \
   npx prisma generate; \
