@@ -22,12 +22,12 @@ export default function config(server: Server): void {
     // Recover the config with app.config.get(ConfigProvider) in your handlers and middleware constructors
 
     server.configure(CORSConfigProviderFactory({
-        origin: '*',
+        origin: process.env.CORS_ORIGIN || '*',
         methods: '*',
         headers: '*',
         maxAge: 86400,
         openerPolicy: 'same-origin',
-        embedderPolicy: 'require-corp'
+        embedderPolicy: 'unsafe-none'
     }));
 
     server.configure(ErrorConfigProviderFactory({

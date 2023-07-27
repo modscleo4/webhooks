@@ -1,0 +1,551 @@
+openapi: 3.0.0
+info:
+  description: "Simple Webhook wrapper in Node.js."
+  version: 1.0.0
+  title: Webhooks
+  contact:
+    email: modscleo4@modscleo4.dev.br
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://webhooks.modscleo4.dev.br
+    description: Production server
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestUser'
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '409':
+          description: Username already in use
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorsResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+  /auth/user:
+    get:
+      tags:
+        - Auth
+      summary: Get current user
+      security:
+        - oauth2: []
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+  /webhook:
+    get:
+      tags:
+        - Webhook
+      summary: Get all webhooks
+      security:
+        - oauth2: ['read:webhooks']
+      responses:
+        '200':
+          description: Webhooks found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Webhook'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    post:
+      tags:
+        - Webhook
+      summary: Create a new webhook
+      security:
+        - oauth2: ['write:webhooks']
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestWebhook'
+      responses:
+        '201':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+  /webhook/{id}:
+    get:
+      tags:
+        - Webhook
+      summary: Get a webhook by ID
+      security:
+        - oauth2: ['read:webhooks']
+      parameters:
+        - name: id
+          in: path
+          description: Webhook's ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    put:
+      tags:
+        - Webhook
+      summary: Update a webhook by ID
+      security:
+        - oauth2: ['write:webhooks']
+      parameters:
+        - name: id
+          in: path
+          description: Webhook's ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestWebhook'
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    patch:
+      tags:
+        - Webhook
+      summary: Partially update a webhook by ID
+      security:
+        - oauth2: ['write:webhooks']
+      parameters:
+        - name: id
+          in: path
+          description: Webhook's ID
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestWebhook'
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Webhook'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+    delete:
+      tags:
+        - Webhook
+      summary: Delete a webhook by ID
+      security:
+        - oauth2: ['delete:webhooks']
+      parameters:
+        - name: id
+          in: path
+          description: Webhook's ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Webhook deleted
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ValidationErrorResponse'
+                  - $ref: '#/components/schemas/ValidationErrorsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+  /webhook/{id}/call:
+    get:
+      tags:
+        - Webhook
+      summary: Call a webhook
+      security:
+        - oauth2: ['call']
+      parameters:
+        - name: id
+          in: path
+          description: Webhook's ID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Webhook called
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookCallResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Webhook not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerErrorResponse'
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      description: OAuth2 password flow
+      flows:
+        password:
+          tokenUrl: /oauth/token
+          scopes:
+            read:webhooks: Write webhooks
+            write:webhooks: Write webhooks
+            delete:webhooks: Delete webhooks
+  schemas:
+    ServerErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Internal server error
+        stack:
+          type: array
+          description: Error stack
+          items:
+            type: object
+            properties:
+              method:
+                type: string
+                description: Method name
+                example: AppController.index
+              file:
+                type: string
+                description: File name
+                example: AppController.ts
+              line:
+                type: integer
+                description: Line number
+                example: 10
+              column:
+                type: integer
+                description: Column number
+                example: 10
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Validation failed
+        error:
+          type: string
+          description: Single validation error (if it's not related to a field)
+          example: Invalid body
+    ValidationErrorsResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Validation failed
+        errors:
+          type: object
+          description: Validation errors
+          example: { "username": ["This field is required"], "password": ["This field is required"] }
+          properties:
+            [key]:
+              type: array
+              items:
+                type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: Invalid request
+    RequestUser:
+      type: object
+      properties:
+        username:
+          type: string
+          description: User's username
+          example: myusername
+        password:
+          type: string
+          description: User's password
+          example: 12345678
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: User's UUID
+          example: 123e4567-e89b-12d3-a456-426614174000
+        username:
+          type: string
+          description: User's username
+          example: myusername
+    RequestWebhook:
+      type: object
+      properties:
+        url:
+          type: string
+          description: Webhook's URL
+          example: https://example.com/webhook
+        method:
+          type: string
+          description: Webhook's request method
+          example: GET
+        headers:
+          type: object
+          description: Webhook's request headers
+          example: { "Content-Type": "application/json" }
+          nullable: true
+          properties:
+            [key]:
+              type: string
+        body:
+          type: string
+          description: Webhook's request body
+          nullable: true
+          example: "{\"body\":\"My webhook content\"}"
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Webhook's UUID
+          example: 123e4567-e89b-12d3-a456-426614174000
+        userId:
+          type: string
+          description: Webhook's user UUID
+          example: 123e4567-e89b-12d3-a456-426614174000
+        url:
+          type: string
+          description: Webhook's URL
+          example: https://example.com/webhook
+        method:
+          type: string
+          description: Webhook's request method
+          example: GET
+        headers:
+          type: object
+          description: Webhook's request headers
+          example: { "Content-Type": "application/json" }
+          nullable: true
+          properties:
+            [key]:
+              type: string
+        body:
+          type: string
+          description: Webhook's request body
+          nullable: true
+          example: "{\"body\":\"My webhook content\"}"
+        createdAt:
+          type: string
+          format: date-time
+          description: Webhook's creation date
+          example: "2021-01-01T00:00:00.000Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Webhook's last update date
+          nullable: true
+          example: "2021-01-01T00:00:00.000Z"
+    WebhookCallResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          description: Webhook's response status code
+          example: 200
+        headers:
+          type: object
+          description: Webhook's response headers
+          example: { "Content-Type": "application/json" }
+          properties:
+            [key]:
+              type: string
+        body:
+          type: string
+          description: Webhook's response body
+          nullable: true
+          example: "{\"body\":\"My webhook content\"}"

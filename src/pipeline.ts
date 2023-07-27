@@ -40,6 +40,8 @@ export default function pipeline(server: Server): void {
      */
     server.pipe(RequestLoggerMiddleware);
 
+    server.pipe(CORSMiddleware);
+
     /**
      * Handle any uncaught Error during the request processing
      *
@@ -62,7 +64,6 @@ export default function pipeline(server: Server): void {
     // Add your own pre-processing middlewares here
     //
     // server.pipe(ResponseCompressionMiddleware);
-    server.pipe(CORSMiddleware);
 
     /**
      * Register the router middleware, which will handle all incoming requests
