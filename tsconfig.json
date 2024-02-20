@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "moduleResolution": "NodeNext",
-        "module": "ESNext",
+        "module": "NodeNext",
         "target": "ESNext",
         "sourceMap": true,
         "outDir": "./dist",
@@ -11,6 +11,10 @@
         "experimentalDecorators": true,
         "esModuleInterop": true,
         "baseUrl": ".",
+        "noImplicitOverride": true,
+        "noImplicitThis": true,
+        "strictBindCallApply": true,
+        "strictNullChecks": true,
         "paths": {
             "@app/*": [
                 "./src/app/*"

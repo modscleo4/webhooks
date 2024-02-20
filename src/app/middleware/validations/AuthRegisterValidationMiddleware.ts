@@ -14,4 +14,22 @@
  * limitations under the License.
  */
 
-export { WebhookLog } from '@prisma/client';
+import { ValidationMiddleware } from "midori/middlewares";
+import { ValidatonRules } from "midori/util/validation.js";
+
+export default class AuthRegisterValidationMiddleware extends ValidationMiddleware {
+    override get rules(): ValidatonRules {
+        return {
+            username: {
+                type: 'string',
+                required: true,
+                nullable: false,
+            },
+            password: {
+                type: 'string',
+                required: true,
+                nullable: false,
+            },
+        };
+    }
+}

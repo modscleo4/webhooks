@@ -57,6 +57,7 @@ model AccessToken {
   id        String    @id @db.Uuid
   userId    String    @map("user_id") @db.Uuid
   scope     String    @db.VarChar(255)
+  userIP    String?   @map("user_ip") @db.VarChar(255)
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime? @updatedAt @map("updated_at")
   expiresAt DateTime? @map("expires_at")

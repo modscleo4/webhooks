@@ -19,10 +19,10 @@ import { HTTPError } from "midori/errors";
 import { Hash } from "midori/hash";
 import { EStatusCode, Handler, Request, Response } from "midori/http";
 import { generateUUID } from "midori/util/uuid.js";
-
-import UserDAO from "@core/dao/UserDAO.js";
 import { Auth } from "midori/auth";
 import { AuthServiceProvider, HashServiceProvider } from "midori/providers";
+
+import { prisma } from "@core/lib/Prisma.js";
 
 export class Register extends Handler {
     #hash: Hash;
@@ -33,12 +33,16 @@ export class Register extends Handler {
         this.#hash = app.services.get(HashServiceProvider);
     }
 
-    async handle(req: Request): Promise<Response> {
+    async handle(req: Request<{ username: string; password: string; }>): Promise<Response> {
+        if (!req.parsedBody) {
+            throw new HTTPError("Invalid body.", EStatusCode.BAD_REQUEST);
+        }
+
         if (!req.parsedBody.username || !req.parsedBody.password) {
             throw new HTTPError("Invalid request.", EStatusCode.BAD_REQUEST);
         }
 
-        const user = await UserDAO.get({
+        const user = await prisma.user.findFirst({
             where: {
                 username: req.parsedBody.username
             }
@@ -50,10 +54,12 @@ export class Register extends Handler {
 
         const password = this.#hash.hash(req.parsedBody.password);
 
-        await UserDAO.create({
-            id: generateUUID(),
-            username: req.parsedBody.username,
-            password,
+        await prisma.user.create({
+            data: {
+                id: generateUUID(),
+                username: req.parsedBody.username,
+                password,
+            }
         });
 
         return Response.status(EStatusCode.CREATED);
@@ -73,7 +79,7 @@ export class User extends Handler {
         // Since the AuthBearer middleware is used, the user is already authenticated
         const authUser = this.#auth.user(req)!;
 
-        const user = (await UserDAO.get({ select: { id: true, username: true }, where: { id: authUser.id } }))!;
+        const user = (await prisma.user.findFirst({ select: { id: true, username: true }, where: { id: authUser.id } }))!;
 
         return Response.json(user);
     }

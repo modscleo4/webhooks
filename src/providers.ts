@@ -29,10 +29,19 @@ import {
 
 import PrismaUserService from "@app/services/PrismaUserService.js";
 import router from '@app/routes/index.js';
+import AuthBearerServiceProvider from "@app/providers/AuthBearerServiceProvider.js";
+
+/**
+ * Service Providers
+ *
+ * Define your service providers here.
+ * Use the server.install() method to install service providers to the application.
+ * Use the app.services.get() method to recover the service in your handlers and/or middleware constructors.
+ */
 
 export default function providers(server: Server): void {
     server.install(RouterServiceProviderFactory(router));
-    server.install(LoggerServiceProviderFactory(new ConsoleLogger({ colorsEnabled: true, minLevel: LogLevel.DEBUG })));
+    server.install(LoggerServiceProviderFactory(new ConsoleLogger({ formattingEnabled: true, minLevel: LogLevel.DEBUG })));
 
     // Add providers here
     // Recover the provider with server.services.get(ServiceProvider) in your handlers and middleware constructors
@@ -40,4 +49,5 @@ export default function providers(server: Server): void {
     server.install(HashServiceProviderFactory(new Scrypt()));
     server.install(UserServiceProviderFactory(new PrismaUserService(server.services.get(HashServiceProvider))));
     server.install(AuthServiceProvider);
+    server.install(AuthBearerServiceProvider);
 }

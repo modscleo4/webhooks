@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Dhiego Cassiano Fogaça Barbosa
+ * Copyright 2023 Dhiego Cassiano Fogaça Barbosa
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,4 +14,14 @@
  * limitations under the License.
  */
 
-export { Webhook } from '@prisma/client';
+import { Application, ServiceProvider } from "midori/app";
+
+import AuthBearerService from "@app/services/AuthBearerService.js";
+
+export default class AuthBearerServiceProvider extends ServiceProvider<AuthBearerService> {
+    static override service: symbol = Symbol('webhooks::Auth::Bearer');
+
+    override register(app: Application): AuthBearerService {
+        return new AuthBearerService(app);
+    }
+}

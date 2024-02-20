@@ -374,9 +374,10 @@ components:
         password:
           tokenUrl: /oauth/token
           scopes:
-            read:webhooks: Write webhooks
+            read:webhooks: Read webhooks
             write:webhooks: Write webhooks
             delete:webhooks: Delete webhooks
+            call: Call webhooks
   schemas:
     ServerErrorResponse:
       type: object

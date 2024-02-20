@@ -34,6 +34,7 @@
     "@prisma/client": "^5.0.0",
     "dotenv": "^16.0.3",
     "midori": "github:modscleo4/midori",
+    "midori-swaggerui": "github:modscleo4/midori-swaggerui",
     "prisma": "^5.0.0"
   },
   "engines": {

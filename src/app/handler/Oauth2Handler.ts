@@ -17,28 +17,49 @@
 import { EStatusCode, Handler, Request, Response } from "midori/http";
 import { HTTPError } from "midori/errors";
 import { Payload } from "midori/util/jwt.js";
-import { generateUUID } from "midori/util/uuid.js";
 import { Application } from "midori/app";
 import { JWT } from "midori/jwt";
 import { Auth } from "midori/auth";
 import { AuthServiceProvider, JWTServiceProvider } from "midori/providers";
 
-import AccessTokenDAO from "@core/dao/AccessTokenDAO.js";
-import UserDAO from "@core/dao/UserDAO.js";
+import { prisma } from "@core/lib/Prisma.js";
 
-export default class Oauth2Handler extends Handler {
+import AuthBearerService from "@app/services/AuthBearerService.js";
+import AuthBearerServiceProvider from "@app/providers/AuthBearerServiceProvider.js";
+
+export class ListKeys extends Handler {
+    #jwt: JWT;
+
+    constructor(app: Application) {
+        super(app);
+
+        this.#jwt = app.services.get(JWTServiceProvider);
+    }
+
+    override async handle(req: Request): Promise<Response> {
+        const jwks = this.#jwt.getPublicKeys();
+
+        return Response.json({
+            keys: jwks,
+        });
+    }
+}
+
+export class Token extends Handler {
     #jwt: JWT;
     #auth: Auth;
+    #authBearer: AuthBearerService;
 
     constructor(app: Application) {
         super(app);
 
         this.#jwt = app.services.get(JWTServiceProvider);
         this.#auth = app.services.get(AuthServiceProvider);
+        this.#authBearer = app.services.get(AuthBearerServiceProvider);
     }
 
-    async handlePasswordGrant(req: Request): Promise<Response> {
-        if (!req.parsedBody.username || !req.parsedBody.password) {
+    async handlePasswordGrant(req: Request<{ grant_type: string, username: string, password: string, scope?: string; }>): Promise<Response> {
+        if (!req.parsedBody?.username || !req.parsedBody?.password) {
             throw new HTTPError("Invalid request.", EStatusCode.BAD_REQUEST);
         }
 
@@ -47,121 +68,50 @@ export default class Oauth2Handler extends Handler {
             throw new HTTPError("Wrong username or password.", EStatusCode.BAD_REQUEST);
         }
 
-        const scope = req.parsedBody.scope || "";
-        const issuedAt = Date.now();
-        const expires = 1000 * 60 * 60 * 1; // 1 hour
+        const tokenInfo = await this.#authBearer.generateToken(user, req.parsedBody.scope || '*', req);
 
-        if (scope.split(' ').includes('call')) {
-            const data: (Payload & { username: string; scope: string; }) = {
-                iss: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-                aud: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-                sub: user.id,
-                iat: Math.floor(issuedAt / 1000),
-                jti: generateUUID(),
-
-                username: user.username,
-                scope,
-            };
-
-            const access_token = this.#jwt.sign(data);
-
-            await AccessTokenDAO.create({ id: data.jti!, user: { connect: { id: user.id } }, scope, expiresAt: null });
-
-            return Response.json({
-                access_token,
-                token_type: 'Bearer',
-                scope,
-            }).withStatus(EStatusCode.CREATED);
-        }
-
-        const data: (Payload & { username: string; scope: string; }) = {
-            iss: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-            aud: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-            sub: user.id,
-            exp: Math.ceil((issuedAt + expires) / 1000),
-            iat: Math.floor(issuedAt / 1000),
-            jti: generateUUID(),
-
-            username: user.username,
-            scope,
-        };
-
-        const access_token = this.#jwt.sign(data);
-        const refresh_token = this.#jwt.encrypt(Buffer.from(JSON.stringify(<Payload> { jti: generateUUID(), sub: data.jti })), 'JWT');
-
-        await AccessTokenDAO.create({ id: data.jti!, user: { connect: { id: user.id } }, scope, expiresAt: new Date(data.exp! * 1000) });
-
-        return Response.json({
-            access_token,
-            refresh_token,
-            expires_in: expires / 1000,
-            token_type: 'Bearer',
-            scope,
-        }).withStatus(EStatusCode.CREATED);
+        return Response.json(tokenInfo).withStatus(EStatusCode.CREATED);
     }
 
-    async handleRefreshTokenGrant(req: Request): Promise<Response> {
-        if (!req.parsedBody.refresh_token) {
+    async handleRefreshTokenGrant(req: Request<{ grant_type: string, refresh_token: string; }>): Promise<Response> {
+        if (!req.parsedBody?.refresh_token) {
             throw new HTTPError("Invalid request.", EStatusCode.BAD_REQUEST);
         }
 
-        const jwsData = this.#jwt.decrypt(req.parsedBody.refresh_token);
-        if (!jwsData) {
+        const jweData = this.#jwt.decrypt(req.parsedBody.refresh_token);
+        if (!jweData) {
             throw new HTTPError("Invalid refresh token.", EStatusCode.BAD_REQUEST);
         }
 
-        const payload = JSON.parse(jwsData.toString()) as Payload;
+        const payload = JSON.parse(jweData.toString()) as Payload;
 
-        const accessToken = await AccessTokenDAO.get({ where: { id: payload.sub } });
-        if (!accessToken || (accessToken.expiresAt && accessToken.expiresAt < new Date()) || accessToken.revokedAt) {
+        const accessToken = await prisma.accessToken.findFirst({ where: { id: payload.sub } });
+        if (!accessToken || accessToken.revokedAt || (payload.exp && payload.exp < Date.now() / 1000)) {
             throw new HTTPError("Invalid refresh token.", EStatusCode.BAD_REQUEST);
         }
 
-        const user = await UserDAO.get({ where: { id: accessToken.userId } });
+        const user = await prisma.user.findFirst({ where: { id: accessToken.userId } });
         if (!user) {
             throw new HTTPError("Invalid refresh token.", EStatusCode.BAD_REQUEST);
         }
 
-        const scope = accessToken.scope;
-        const issuedAt = Date.now();
-        const expires = 1000 * 60 * 60 * 1; // 1 hour
+        const tokenInfo = await this.#authBearer.generateToken(user, accessToken.scope, req);
 
-        const data: (Payload & { username: string; scope: string; }) = {
-            iss: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-            aud: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
-            sub: user.id,
-            exp: Math.ceil((issuedAt + expires) / 1000),
-            iat: Math.floor(issuedAt / 1000),
-            jti: generateUUID(),
+        await prisma.accessToken.update({ where: { id: payload.sub! }, data: { revokedAt: new Date() } });
 
-            username: user.username,
-            scope: accessToken.scope,
-        };
-
-        const access_token = this.#jwt.sign(data);
-        const refresh_token = this.#jwt.encrypt(Buffer.from(JSON.stringify(<Payload> { jti: generateUUID(), sub: data.jti })), 'JWT');
-
-        await AccessTokenDAO.save(payload.sub!, { revokedAt: new Date() });
-
-        return Response.json({
-            access_token,
-            refresh_token,
-            expires_in: expires / 1000,
-            token_type: 'Bearer',
-            scope,
-        }).withStatus(EStatusCode.CREATED);
+        return Response.json(tokenInfo).withStatus(EStatusCode.CREATED);
     }
 
-    async handle(req: Request): Promise<Response> {
+    override async handle(req: Request<{ grant_type: string; }>): Promise<Response> {
         if (!req.parsedBody || !req.parsedBody.grant_type) {
             throw new HTTPError("Invalid request.", EStatusCode.UNAUTHORIZED);
         }
 
         switch (req.parsedBody.grant_type) {
             case 'password':
-                return await this.handlePasswordGrant(req);
+                return await this.handlePasswordGrant(req as Request<{ grant_type: string; username: string; password: string; scope?: string | undefined; }>);
             case 'refresh_token':
-                return await this.handleRefreshTokenGrant(req);
+                return await this.handleRefreshTokenGrant(req as Request<{ grant_type: string; refresh_token: string; }>);
         }
 
         throw new HTTPError("Invalid request.", EStatusCode.UNAUTHORIZED);

@@ -22,8 +22,8 @@ import { Application } from "midori/app";
 import { AuthServiceProvider } from "midori/providers";
 
 import { Prisma, Webhook } from "@prisma/client";
-import WebhookDAO from "@core/dao/WebhookDAO.js";
-import WebhookLogDAO from "@core/dao/WebhookLogDAO.js";
+
+import { prisma } from "@core/lib/Prisma.js";
 
 export class List extends Handler {
     #auth: Auth;
@@ -38,7 +38,7 @@ export class List extends Handler {
         // Since the AuthBearer middleware is used, the user is already authenticated
         const user = this.#auth.user(req)!;
 
-        const data = await WebhookDAO.all({
+        const data = await prisma.webhook.findMany({
             where: {
                 user: {
                     id: user.id
@@ -80,7 +80,7 @@ export class Create extends Handler {
             body: req.parsedBody.body,
         };
 
-        const saved = await WebhookDAO.create(data);
+        const saved = await prisma.webhook.create({ data });
         if (!saved) {
             throw new HTTPError("Failed to save webhook.", EStatusCode.INTERNAL_SERVER_ERROR);
         }
@@ -104,7 +104,7 @@ export class Show extends Handler {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
         }
 
-        const webhook = await WebhookDAO.get({
+        const webhook = await prisma.webhook.findFirst({
             where: {
                 id
             }
@@ -140,7 +140,7 @@ export class Update extends Handler {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
         }
 
-        const webhook = await WebhookDAO.get({
+        const webhook = await prisma.webhook.findFirst({
             where: {
                 id
             }
@@ -166,7 +166,7 @@ export class Update extends Handler {
         webhook.headers = req.parsedBody.headers;
         webhook.body = req.parsedBody.body;
 
-        await WebhookDAO.save(webhook.id, { url: webhook.url, method: webhook.method, headers: webhook.headers ?? undefined, body: webhook.body });
+        await prisma.webhook.update({ where: { id }, data: { url: webhook.url, method: webhook.method, headers: webhook.headers ?? undefined, body: webhook.body } });
 
         return Response.json<Webhook>(webhook);
     }
@@ -187,7 +187,7 @@ export class Patch extends Handler {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
         }
 
-        const webhook = await WebhookDAO.get({
+        const webhook = await prisma.webhook.findFirst({
             where: {
                 id
             }
@@ -224,7 +224,7 @@ export class Patch extends Handler {
             webhook.body = req.parsedBody.body;
         }
 
-        await WebhookDAO.save(webhook.id, { method: webhook.method, url: webhook.url, headers: webhook.headers ?? undefined, body: webhook.body });
+        await prisma.webhook.update({ where: { id }, data: { method: webhook.method, url: webhook.url, headers: webhook.headers ?? undefined, body: webhook.body } });
 
         return Response.json(webhook);
     }
@@ -245,7 +245,7 @@ export class Destroy extends Handler {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
         }
 
-        const webhook = await WebhookDAO.get({
+        const webhook = await prisma.webhook.findFirst({
             where: {
                 id
             }
@@ -262,7 +262,7 @@ export class Destroy extends Handler {
             throw new HTTPError('You are not the owner of this webhook.', EStatusCode.FORBIDDEN);
         }
 
-        await WebhookDAO.delete(webhook.id);
+        await prisma.webhook.delete({ where: { id } });
 
         return Response.empty();
     }
@@ -283,7 +283,7 @@ export class Call extends Handler {
             throw new HTTPError("Invalid ID.", EStatusCode.BAD_REQUEST);
         }
 
-        const webhook = await WebhookDAO.get({
+        const webhook = await prisma.webhook.findFirst({
             where: {
                 id
             }
@@ -314,16 +314,18 @@ export class Call extends Handler {
                 responseHeaders[key] = value;
             }
 
-            await WebhookLogDAO.create({
-                id: generateUUID(),
-                webhook: {
-                    connect: {
-                        id: webhook.id
-                    }
-                },
-                status: res.status,
-                headers: responseHeaders,
-                body
+            await prisma.webhookLog.create({
+                data: {
+                    id: generateUUID(),
+                    webhook: {
+                        connect: {
+                            id: webhook.id
+                        }
+                    },
+                    status: res.status,
+                    headers: responseHeaders,
+                    body
+                }
             });
 
             return Response.json({

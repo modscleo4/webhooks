@@ -23,6 +23,7 @@ import { prisma } from "@core/lib/Prisma.js";
 import pipeline from "./pipeline.js";
 import providers from "./providers.js";
 import config from './config.js';
+import cron from './cron.js';
 
 dotenv.config({ });
 
@@ -35,12 +36,13 @@ if (!server.production) {
 config(server);
 providers(server);
 pipeline(server);
+cron(server);
 
 const port = parseInt(process.env.PORT || '3000');
 
 await new Promise<void>((resolve, reject) => {
     server.listen(port).on('listening', async () => {
-        console.log(`Server is running on port ${port}`);
+        console.log(`Server is running on port ${port} in ${server.production ? 'production' : 'development'} mode`);
         await prisma.$connect();
         resolve();
     }).on('close', async () => {

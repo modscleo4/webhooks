@@ -17,7 +17,7 @@
 import { Router as RouterWrapper } from "midori/router";
 import { Response } from "midori/http";
 
-import Oauth2Handler from "@app/handler/Oauth2Handler.js";
+import * as Oauth2Handler from "@app/handler/Oauth2Handler.js";
 import * as WebhookHandler from "@app/handler/WebhookHandler.js";
 import * as AuthHandler from "@app/handler/AuthHandler.js";
 
@@ -27,9 +27,12 @@ import WebhookCreateValidationMiddleware from "@app/middleware/validations/Webho
 import WebhookUpdateValidationMiddleware from "@app/middleware/validations/WebhookUpdateValidationMiddleware.js";
 import WebhookPatchValidationMiddleware from "@app/middleware/validations/WebhookPatchValidationMiddleware.js";
 
-import addSwaggerRoutes from "@swagger-ui/swagger.router.js";
+import { addSwaggerRoutes } from "midori-swaggerui";
 
-const OauthScopeMiddlewareCall = OauthScopeMiddlewareFactory({ scopes: ['call'] });
+const OauthScopeMiddlewareCallWebhook = OauthScopeMiddlewareFactory({ scopes: ['call'] });
+const OauthScopeMiddlewareReadWebhook = OauthScopeMiddlewareFactory({ scopes: ['read:webhooks'] });
+const OauthScopeMiddlewareWriteWebhook = OauthScopeMiddlewareFactory({ scopes: ['write:webhooks'] });
+const OauthScopeMiddlewareDeleteWebhook = OauthScopeMiddlewareFactory({ scopes: ['delete:webhooks'] });
 
 const Router = new RouterWrapper();
 
@@ -47,19 +50,20 @@ Router.get('/', async (req, res) => Response.redirect('/docs')).withName('home')
 
 Router.get('/auth/user', AuthHandler.User, [AuthBearerMiddleware]).withName('auth.user');
 
-Router.post('/oauth/token', Oauth2Handler).withName('oauth.token');
+Router.get('/jwks.json', Oauth2Handler.ListKeys).withName('oauth.jwk');
+Router.post('/oauth/token', Oauth2Handler.Token).withName('oauth.token');
 
 Router.group('/webhook', () => {
-    Router.get('/', WebhookHandler.List, [AuthBearerMiddleware]).withName('webhook.list');
-    Router.post('/', WebhookHandler.Create, [AuthBearerMiddleware, WebhookCreateValidationMiddleware]).withName('webhook.create');
+    Router.get('', WebhookHandler.List, [AuthBearerMiddleware, OauthScopeMiddlewareReadWebhook]).withName('webhook.list');
+    Router.post('', WebhookHandler.Create, [AuthBearerMiddleware, OauthScopeMiddlewareWriteWebhook, WebhookCreateValidationMiddleware]).withName('webhook.create');
 
     Router.group('/{id}', () => {
-        Router.get('/', WebhookHandler.Show, [AuthBearerMiddleware]).withName('webhook.show');
-        Router.put('/', WebhookHandler.Update, [AuthBearerMiddleware, WebhookUpdateValidationMiddleware]).withName('webhook.update');
-        Router.patch('/', WebhookHandler.Patch, [AuthBearerMiddleware, WebhookPatchValidationMiddleware]).withName('webhook.patch');
-        Router.delete('/', WebhookHandler.Destroy, [AuthBearerMiddleware]).withName('webhook.destroy');
+        Router.get('', WebhookHandler.Show, [AuthBearerMiddleware, OauthScopeMiddlewareReadWebhook]).withName('webhook.show');
+        Router.put('', WebhookHandler.Update, [AuthBearerMiddleware, OauthScopeMiddlewareWriteWebhook, WebhookUpdateValidationMiddleware]).withName('webhook.update');
+        Router.patch('', WebhookHandler.Patch, [AuthBearerMiddleware, OauthScopeMiddlewareWriteWebhook, WebhookPatchValidationMiddleware]).withName('webhook.patch');
+        Router.delete('', WebhookHandler.Destroy, [AuthBearerMiddleware, OauthScopeMiddlewareDeleteWebhook]).withName('webhook.destroy');
 
-        Router.get('/call', WebhookHandler.Call, [AuthBearerMiddleware, OauthScopeMiddlewareCall]).withName('webhook.call');
+        Router.get('/call', WebhookHandler.Call, [AuthBearerMiddleware, OauthScopeMiddlewareCallWebhook]).withName('webhook.call');
     });
 });
 
