@@ -26,6 +26,20 @@ import { prisma } from "@core/lib/Prisma.js";
 
 const allScopes = ['read:webhooks', 'write:webhooks', 'delete:webhooks', 'call'];
 
+type ExpiringToken = {
+    token_type: 'Bearer';
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    scope: string;
+};
+
+type NonExpiringToken = {
+    token_type: 'Bearer';
+    access_token: string;
+    scope: string;
+};
+
 export default class AuthBearerService {
     #jwt: JWT;
 
@@ -33,10 +47,7 @@ export default class AuthBearerService {
         this.#jwt = app.services.get(JWTServiceProvider);
     }
 
-    async generateToken(user: User, scope: string, req: Request): Promise<{ token_type: 'Bearer'; access_token: string; refresh_token: string; expires_in: number; scope: string; }> {
-        const issuedAt = Date.now();
-        const expires = 1000 * 60 * 10; // 10 minutes
-
+    async generateToken(user: User, scope: string, req: Request): Promise<ExpiringToken | NonExpiringToken> {
         scope = scope.trim();
 
         if (scope === '*') {
@@ -44,6 +55,17 @@ export default class AuthBearerService {
         }
 
         scope = scope.split(' ').filter(s => allScopes.includes(s)).join(' ');
+
+        if (scope.split(' ').includes('call')) {
+            return await this.generateNonExpiringToken(user, scope, req);
+        }
+
+        return await this.generateExpiringToken(user, scope, req);
+    }
+
+    async generateExpiringToken(user: User, scope: string, req: Request): Promise<ExpiringToken> {
+        const issuedAt = Date.now();
+        const expires = 1000 * 60 * 10; // 10 minutes
 
         const data: (JWTPayload & { username: string; scope: string; }) = {
             iss: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
@@ -75,6 +97,38 @@ export default class AuthBearerService {
             access_token,
             refresh_token,
             expires_in: expires / 1000,
+            scope,
+        };
+    }
+
+    async generateNonExpiringToken(user: User, scope: string, req: Request): Promise<NonExpiringToken> {
+        const issuedAt = Date.now();
+
+        const data: (JWTPayload & { username: string; scope: string; }) = {
+            iss: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
+            aud: `${req.headers['x-forwarded-proto'] ?? 'http'}://${req.headers.host}`,
+            sub: user.id,
+            iat: Math.floor(issuedAt / 1000),
+            jti: generateUUID(),
+
+            username: user.username,
+            scope,
+        };
+
+        const access_token = this.#jwt.sign(data);
+
+        await prisma.accessToken.create({
+            data: {
+                id: data.jti!,
+                user: { connect: { id: user.id } },
+                scope,
+                userIP: req.ip
+            }
+        });
+
+        return {
+            token_type: 'Bearer',
+            access_token,
             scope,
         };
     }

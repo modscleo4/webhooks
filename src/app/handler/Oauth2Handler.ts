@@ -68,7 +68,7 @@ export class Token extends Handler {
             throw new HTTPError("Wrong username or password.", EStatusCode.BAD_REQUEST);
         }
 
-        const tokenInfo = await this.#authBearer.generateToken(user, req.parsedBody.scope || '*', req);
+        const tokenInfo = await this.#authBearer.generateExpiringToken(user, req.parsedBody.scope || '*', req);
 
         return Response.json(tokenInfo).withStatus(EStatusCode.CREATED);
     }
@@ -95,7 +95,7 @@ export class Token extends Handler {
             throw new HTTPError("Invalid refresh token.", EStatusCode.BAD_REQUEST);
         }
 
-        const tokenInfo = await this.#authBearer.generateToken(user, accessToken.scope, req);
+        const tokenInfo = await this.#authBearer.generateExpiringToken(user, accessToken.scope, req);
 
         await prisma.accessToken.update({ where: { id: payload.sub! }, data: { revokedAt: new Date() } });
 
